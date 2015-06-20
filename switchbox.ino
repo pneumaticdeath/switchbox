@@ -65,6 +65,7 @@ uint8_t pos_r, pos_g, pos_b;
 uint32_t animation_target_color = 0;
 uint16_t wipe_animation_delay = 25;
 uint16_t chase_animation_delay = 50;
+uint16_t rainbow_wheel_speed = 1;
 
 uint16_t red_blink_interval, grn_blink_interval, blu_blink_interval, blink_counter;
 
@@ -90,7 +91,7 @@ void animate_np() {
         strip.setPixelColor(anim_i, Wheel(((anim_i * 256 / strip.numPixels()) + anim_j) & 255));
       }
       strip.show();
-      anim_j = (anim_j + 1) & 255;
+      anim_j = (anim_j + rainbow_wheel_speed) & 255;
       next_animation_time = now + 20;
       break;
       
@@ -197,7 +198,6 @@ boolean btn_read(boolean *btn_dwn, int btn_pin) {
     if ( ! *btn_dwn ) {
       btn_debounce_timer = millis();
       *btn_dwn = true;
-      // digitalWrite(btn_pin, HIGH); // reset pullup resistor
       // write new random seed based on timing and current random number
       // randomSeed(random(1024)^(btn_debounce_timer&1023));
       return true;
@@ -206,7 +206,6 @@ boolean btn_read(boolean *btn_dwn, int btn_pin) {
     if ( *btn_dwn ) {
       btn_debounce_timer = millis();
       *btn_dwn = false;
-      // digitalWrite(btn_pin, HIGH); // reset pullup resistor
       return true;
     }
   }
@@ -251,14 +250,12 @@ void setup() {
 
 void loop() {
   // deal with millis() rollover
-  /*
   if ( millis() < btn_debounce_timer ) {
     btn_debounce_timer = 0;
   }
-  */
   
   if ( btn_read(&sw1_on, SW1_PIN) || btn_read(&sw2_on, SW2_PIN) || curr_mode < 0 ) {
-    int new_mode = sw1_on?1:0 + sw2_on?2:0;
+    int new_mode = (sw1_on?1:0) + (sw2_on?2:0);
     switch (new_mode) {
       case 0:
         animation_mode = chaser;
@@ -334,9 +331,15 @@ void loop() {
       
       if ( btn_read(&big_btn_down, BIGBTN_IN) ) { // big button pressed
         if ( big_btn_down ) {
-          dir_b = 5;
-          dir_r = 5;
-          dir_g = -5;
+          if ( dir_b == 5 && dir_r == 5 && dir_g == -5 ) {
+            dir_b = random(-10, 11);
+            dir_g = random(-10, 11);
+            dir_r = random(-10, 11);
+          } else {
+            dir_b = 5;
+            dir_r = 5;
+            dir_g = -5;
+          }
         }
       }
       break;
@@ -489,6 +492,23 @@ void loop() {
       }
       break;
     case 3:
+      if ( btn_read(&red_btn_down, REDBTN_IN) && red_btn_down ) {
+        rainbow_wheel_speed = rainbow_wheel_speed^1;
+      }
+      
+      if ( btn_read(&grn_btn_down, GRNBTN_IN) && grn_btn_down ) {
+        rainbow_wheel_speed = rainbow_wheel_speed^2;
+      }
+      
+      if ( btn_read(&blu_btn_down, BLUBTN_IN) && blu_btn_down ) {
+        rainbow_wheel_speed = rainbow_wheel_speed^4;
+      }
+      
+      // Write status of bits out
+      digitalWrite(REDBTN_OUT, ((rainbow_wheel_speed&1)!=0)?HIGH:LOW);
+      digitalWrite(GRNBTN_OUT, ((rainbow_wheel_speed&2)!=0)?HIGH:LOW);
+      digitalWrite(BLUBTN_OUT, ((rainbow_wheel_speed&4)!=0)?HIGH:LOW);
+      
       break;
     default:
       // nothing
