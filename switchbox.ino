@@ -1,4 +1,5 @@
 #include <Adafruit_NeoPixel.h>
+#include "pitches.h"
 
 #define NEOPIXEL_PIN 6
 #define NUM_PIXELS 16
@@ -66,6 +67,8 @@ uint32_t animation_target_color = 0;
 uint16_t wipe_animation_delay = 25;
 uint16_t chase_animation_delay = 50;
 uint16_t rainbow_wheel_speed = 1;
+
+
 
 uint16_t red_blink_interval, grn_blink_interval, blu_blink_interval, blink_counter;
 
