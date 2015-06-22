@@ -31,6 +31,8 @@ boolean blu_btn_down = false;
 boolean sw1_on = false;
 boolean sw2_on = false;
 
+uint16_t btn_tones[16];
+
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
   if(WheelPos < 85) {
@@ -67,9 +69,6 @@ uint32_t animation_target_color = 0;
 uint16_t wipe_animation_delay = 25;
 uint16_t chase_animation_delay = 50;
 uint16_t rainbow_wheel_speed = 1;
-
-
-
 uint16_t red_blink_interval, grn_blink_interval, blu_blink_interval, blink_counter;
 
 void animation_init() {
@@ -201,6 +200,7 @@ boolean btn_read(boolean *btn_dwn, int btn_pin) {
     if ( ! *btn_dwn ) {
       btn_debounce_timer = millis();
       *btn_dwn = true;
+      tone(SPKR_PIN, btn_tones[btn_pin], 250);
       // write new random seed based on timing and current random number
       // randomSeed(random(1024)^(btn_debounce_timer&1023));
       return true;
@@ -209,6 +209,9 @@ boolean btn_read(boolean *btn_dwn, int btn_pin) {
     if ( *btn_dwn ) {
       btn_debounce_timer = millis();
       *btn_dwn = false;
+      if ( btn_pin == SW1_PIN || btn_pin == SW2_PIN ) {
+        tone(SPKR_PIN, btn_tones[btn_pin], 250);
+      }
       return true;
     }
   }
@@ -224,25 +227,31 @@ void setup() {
   pinMode(SW1_PIN,       INPUT);
   digitalWrite(SW1_PIN,   HIGH); // turn on internal pullup resistor
   sw1_on = (digitalRead(SW1_PIN) == 0)?true:false;
-  digitalWrite(SW1_PIN,   HIGH);
+  btn_tones[SW1_PIN] = NOTE_C2;
   
   pinMode(SW2_PIN,       INPUT);
   digitalWrite(SW2_PIN,   HIGH); // this one too
   sw2_on = (digitalRead(SW2_PIN) == 0)?true:false;
-  digitalWrite(SW2_PIN,   HIGH); // this one too
+  btn_tones[SW2_PIN] = NOTE_E2;
   
   pinMode(REDBTN_OUT,   OUTPUT);
   pinMode(REDBTN_IN,     INPUT);
   digitalWrite(REDBTN_IN, HIGH); // turn on internal pullup resistor
+  btn_tones[REDBTN_IN] = NOTE_C3;
+  
   pinMode(GRNBTN_OUT,   OUTPUT);
   pinMode(GRNBTN_IN,     INPUT);
   digitalWrite(GRNBTN_IN, HIGH); // turn on internal pullup resistor
+  btn_tones[GRNBTN_IN] = NOTE_D3;
+  
   pinMode(BLUBTN_OUT,   OUTPUT);
   pinMode(BLUBTN_IN,     INPUT);
   digitalWrite(BLUBTN_IN, HIGH); // turn on internal pullup resistor
+  btn_tones[BLUBTN_IN] = NOTE_F3;
 
   pinMode(BIGBTN_IN,     INPUT);
   digitalWrite(BIGBTN_IN, HIGH); // turn on internal pullup resistor
+  btn_tones[BIGBTN_IN] = NOTE_G3;
   
   pinMode(SPKR_PIN,     OUTPUT);
   
