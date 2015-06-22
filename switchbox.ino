@@ -247,11 +247,11 @@ void setup() {
   pinMode(BLUBTN_OUT,   OUTPUT);
   pinMode(BLUBTN_IN,     INPUT);
   digitalWrite(BLUBTN_IN, HIGH); // turn on internal pullup resistor
-  btn_tones[BLUBTN_IN] = NOTE_F3;
+  btn_tones[BLUBTN_IN] = NOTE_E3;
 
   pinMode(BIGBTN_IN,     INPUT);
   digitalWrite(BIGBTN_IN, HIGH); // turn on internal pullup resistor
-  btn_tones[BIGBTN_IN] = NOTE_G3;
+  btn_tones[BIGBTN_IN] = NOTE_F3;
   
   pinMode(SPKR_PIN,     OUTPUT);
   
