@@ -1,4 +1,5 @@
 #include <Adafruit_NeoPixel.h>
+#include "SwitchButton.h"
 #include "pitches.h"
 
 #define NEOPIXEL_PIN 6
@@ -22,16 +23,16 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, NEOPIXEL_PIN, NEO_GRB + 
 int curr_mode = -1;
 uint32_t btn_debounce_timer = 0;
 #define DEBOUNCE_DELAY 50
+#define LONGPRESS_TIME 1000
+#define BEEP_TIME 250
 
-boolean big_btn_down = false;
-boolean red_btn_down = false;
-boolean grn_btn_down = false;
-boolean blu_btn_down = false;
+SwitchButton red_button = SwitchButton(REDBTN_IN, LONGPRESS_TIME, DEBOUNCE_DELAY, SPKR_PIN, NOTE_C3, BEEP_TIME);
+SwitchButton grn_button = SwitchButton(GRNBTN_IN, LONGPRESS_TIME, DEBOUNCE_DELAY, SPKR_PIN, NOTE_D3, BEEP_TIME);
+SwitchButton blu_button = SwitchButton(BLUBTN_IN, LONGPRESS_TIME, DEBOUNCE_DELAY, SPKR_PIN, NOTE_E3, BEEP_TIME);
+SwitchButton big_button = SwitchButton(BIGBTN_IN, LONGPRESS_TIME, DEBOUNCE_DELAY, SPKR_PIN, NOTE_F3, BEEP_TIME);
 
-boolean sw1_on = false;
-boolean sw2_on = false;
-
-uint16_t btn_tones[16];
+SwitchButton sw1 = SwitchButton(SW1_PIN, LONGPRESS_TIME, DEBOUNCE_DELAY, SPKR_PIN, NOTE_C2, BEEP_TIME, NOTE_E2, BEEP_TIME);
+SwitchButton sw2 = SwitchButton(SW2_PIN, LONGPRESS_TIME, DEBOUNCE_DELAY, SPKR_PIN, NOTE_D2, BEEP_TIME, NOTE_F2, BEEP_TIME);
 
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
@@ -193,66 +194,24 @@ void animate_np() {
       
 }
 
-boolean btn_read(boolean *btn_dwn, int btn_pin) {
-  if ( (millis() - btn_debounce_timer) <= DEBOUNCE_DELAY ) return false;  // too soon to read again
-
-  if ( digitalRead(btn_pin) == 0 ) {  // the button is pressed
-    if ( ! *btn_dwn ) {
-      btn_debounce_timer = millis();
-      *btn_dwn = true;
-      tone(SPKR_PIN, btn_tones[btn_pin], 250);
-      // write new random seed based on timing and current random number
-      // randomSeed(random(1024)^(btn_debounce_timer&1023));
-      return true;
-    }
-  } else {
-    if ( *btn_dwn ) {
-      btn_debounce_timer = millis();
-      *btn_dwn = false;
-      if ( btn_pin == SW1_PIN || btn_pin == SW2_PIN ) {
-        tone(SPKR_PIN, btn_tones[btn_pin], 250);
-      }
-      return true;
-    }
-  }
+void read_all_buttons() {
+  red_button.read();
+  grn_button.read();
+  blu_button.read();
   
-  return false;
+  big_button.read();
+  
+  sw1.read();
+  sw2.read();
 }
 
 void setup() {
   // Random seed setup
   randomSeed(analogRead(0));
   
-  // Mode select pins
-  pinMode(SW1_PIN,       INPUT);
-  digitalWrite(SW1_PIN,   HIGH); // turn on internal pullup resistor
-  sw1_on = (digitalRead(SW1_PIN) == 0)?true:false;
-  btn_tones[SW1_PIN] = NOTE_C2;
-  
-  pinMode(SW2_PIN,       INPUT);
-  digitalWrite(SW2_PIN,   HIGH); // this one too
-  sw2_on = (digitalRead(SW2_PIN) == 0)?true:false;
-  btn_tones[SW2_PIN] = NOTE_E2;
-  
   pinMode(REDBTN_OUT,   OUTPUT);
-  pinMode(REDBTN_IN,     INPUT);
-  digitalWrite(REDBTN_IN, HIGH); // turn on internal pullup resistor
-  btn_tones[REDBTN_IN] = NOTE_C3;
-  
   pinMode(GRNBTN_OUT,   OUTPUT);
-  pinMode(GRNBTN_IN,     INPUT);
-  digitalWrite(GRNBTN_IN, HIGH); // turn on internal pullup resistor
-  btn_tones[GRNBTN_IN] = NOTE_D3;
-  
   pinMode(BLUBTN_OUT,   OUTPUT);
-  pinMode(BLUBTN_IN,     INPUT);
-  digitalWrite(BLUBTN_IN, HIGH); // turn on internal pullup resistor
-  btn_tones[BLUBTN_IN] = NOTE_E3;
-
-  pinMode(BIGBTN_IN,     INPUT);
-  digitalWrite(BIGBTN_IN, HIGH); // turn on internal pullup resistor
-  btn_tones[BIGBTN_IN] = NOTE_F3;
-  
   pinMode(SPKR_PIN,     OUTPUT);
   
   strip.begin();
@@ -261,13 +220,11 @@ void setup() {
 }
 
 void loop() {
-  // deal with millis() rollover
-  if ( millis() < btn_debounce_timer ) {
-    btn_debounce_timer = 0;
-  }
+
+  read_all_buttons();
   
-  if ( btn_read(&sw1_on, SW1_PIN) || btn_read(&sw2_on, SW2_PIN) || curr_mode < 0 ) {
-    int new_mode = (sw1_on?1:0) + (sw2_on?2:0);
+  if ( sw1.has_event || sw2.has_event || curr_mode < 0 ) {
+    int new_mode = (sw1.is_down?1:0) + (sw2.is_down?2:0);
     switch (new_mode) {
       case 0:
         animation_mode = chaser;
@@ -299,8 +256,8 @@ void loop() {
   
   switch (curr_mode) {
     case 0: // chaser
-      if ( btn_read(&red_btn_down, REDBTN_IN) ) {  // red button pressed
-        if ( red_btn_down ) {
+      if ( red_button.has_event ) {  // red button pressed
+        if ( red_button.is_down ) {
           if ( dir_r > 0 && dir_r < 32 ) {
             dir_r += 1;
           } else if ( dir_r <= 0 && dir_r > -32 ) {
@@ -313,8 +270,8 @@ void loop() {
         }
       }
       
-      if ( btn_read(&grn_btn_down, GRNBTN_IN) ) {  // green button pressed
-        if ( grn_btn_down ) {
+      if ( grn_button.has_event ) {  // green button pressed
+        if ( grn_button.is_down ) {
           if ( dir_g > 0 && dir_g < 32 ) {
             dir_g += 1;
           } else if ( dir_g <= 0 && dir_g > -32 ) {
@@ -327,8 +284,8 @@ void loop() {
         }
       }
       
-      if ( btn_read(&blu_btn_down, BLUBTN_IN) ) {  // blue button pressed
-        if ( blu_btn_down ) {
+      if ( blu_button.has_event ) {  // blue button pressed
+        if ( blu_button.is_down ) {
           if ( dir_b > 0 && dir_b < 32 ) {
             dir_b += 1;
           } else if ( dir_b <= 0 && dir_b > -32 ) {
@@ -341,8 +298,8 @@ void loop() {
         }
       }
       
-      if ( btn_read(&big_btn_down, BIGBTN_IN) ) { // big button pressed
-        if ( big_btn_down ) {
+      if ( big_button.has_event ) { // big button pressed
+        if ( big_button.is_down ) {
           if ( dir_b == 5 && dir_r == 5 && dir_g == -5 ) {
             dir_b = random(-10, 11);
             dir_g = random(-10, 11);
@@ -360,7 +317,7 @@ void loop() {
       digitalWrite(GRNBTN_OUT, ((blink_counter&grn_blink_interval) != 0)?HIGH:LOW);
       digitalWrite(BLUBTN_OUT, ((blink_counter&blu_blink_interval) != 0)?HIGH:LOW);
       
-      if ( btn_read(&red_btn_down, REDBTN_IN) && red_btn_down ) {
+      if ( red_button.is_pressed ) {
         if ( red_blink_interval >= 4096 ) {
           red_blink_interval = 128;
         } else {
@@ -368,7 +325,7 @@ void loop() {
         }
       }
       
-      if ( btn_read(&grn_btn_down, GRNBTN_IN) && grn_btn_down ) {
+      if ( grn_button.is_pressed ) {
         if ( grn_blink_interval >= 4096 ) {
           grn_blink_interval = 128;
         } else {
@@ -376,7 +333,7 @@ void loop() {
         }
       }
       
-      if ( btn_read(&blu_btn_down, BLUBTN_IN) && blu_btn_down ) {
+      if ( blu_button.is_pressed ) {
         if ( blu_blink_interval >= 4096 ) {
           blu_blink_interval = 128;
         } else {
@@ -384,7 +341,7 @@ void loop() {
         }
       }
       
-      if ( btn_read(&big_btn_down, BIGBTN_IN) && big_btn_down ) {
+      if ( big_button.is_pressed ) {
         red_blink_interval = 256;
         grn_blink_interval = 512;
         blu_blink_interval = 1024;
@@ -394,7 +351,7 @@ void loop() {
       blink_counter = (blink_counter + 1) % 8192;
       break;
     case 2:
-      if ( btn_read(&big_btn_down, BIGBTN_IN) && big_btn_down ) {
+      if ( big_button.is_pressed ) {
         switch ( animation_mode ) {
           case rotating_chase:
             animation_mode = color_chase;
@@ -417,7 +374,7 @@ void loop() {
         }
       }
       
-      if ( btn_read(&grn_btn_down, GRNBTN_IN) && grn_btn_down ) {
+      if ( grn_button.is_pressed ) {
         digitalWrite(GRNBTN_OUT, HIGH);
         switch ( animation_mode ) {
           case rotating_wipe:
@@ -431,19 +388,19 @@ void loop() {
             chase_animation_delay = random(25, 125);
             break;
         }
-      } else if ( grn_btn_down && (millis() - btn_debounce_timer) > 1000 ) {
-        if ( (((millis() - btn_debounce_timer)/512)%2) == 1 ) {
+      } else if ( grn_button.is_long_press ) {
+        if ( (((millis() - grn_button.button_debounce_timer)/512)%2) == 1 ) {
           digitalWrite(GRNBTN_OUT, LOW);
         } else {
           digitalWrite(GRNBTN_OUT, HIGH);
         }
         wipe_animation_delay = 25;
         chase_animation_delay = 50;
-      } else if ( !grn_btn_down ) {
+      } else if ( ! grn_button.is_down ) {
         digitalWrite(GRNBTN_OUT, LOW);
       }
       
-      if ( btn_read(&red_btn_down, REDBTN_IN) && red_btn_down ) {
+      if ( red_button.is_pressed ) {
         digitalWrite(REDBTN_OUT, HIGH);
         switch ( animation_mode ) {
           case rotating_wipe:
@@ -461,7 +418,7 @@ void loop() {
             }
             break;
         }
-      } else if ( red_btn_down && (millis() - btn_debounce_timer) > 1000 ) {
+      } else if ( red_button.is_long_press ) {
         if ( (((millis() - btn_debounce_timer)/512)%2) == 1 ) {
           digitalWrite(REDBTN_OUT, LOW);
         } else {
@@ -469,11 +426,11 @@ void loop() {
         }
         wipe_animation_delay = 10;
         chase_animation_delay = 25;
-      } else if ( !red_btn_down ) {
+      } else if ( ! red_button.is_down ) {
         digitalWrite(REDBTN_OUT, LOW);
       }
       
-      if ( btn_read(&blu_btn_down, BLUBTN_IN) && blu_btn_down ) {
+      if ( blu_button.is_pressed ) {
         digitalWrite(BLUBTN_OUT, HIGH);
         switch ( animation_mode ) {
           case rotating_wipe:
@@ -491,7 +448,7 @@ void loop() {
             }
             break;
         }
-      } else if ( blu_btn_down && (millis() - btn_debounce_timer) > 1000 ) {
+      } else if ( blu_button.is_long_press ) {
         if ( (((millis() - btn_debounce_timer)/512)%2) == 1 ) {
           digitalWrite(BLUBTN_OUT, LOW);
         } else {
@@ -499,20 +456,20 @@ void loop() {
         }
         wipe_animation_delay = 100;
         chase_animation_delay = 150;
-      } else if ( !blu_btn_down ) {
+      } else if ( ! blu_button.is_down ) {
         digitalWrite(BLUBTN_OUT, LOW);
       }
       break;
     case 3:
-      if ( btn_read(&red_btn_down, REDBTN_IN) && red_btn_down ) {
+      if ( red_button.is_pressed ) {
         rainbow_wheel_speed = rainbow_wheel_speed^1;
       }
       
-      if ( btn_read(&grn_btn_down, GRNBTN_IN) && grn_btn_down ) {
+      if ( grn_button.is_pressed ) {
         rainbow_wheel_speed = rainbow_wheel_speed^2;
       }
       
-      if ( btn_read(&blu_btn_down, BLUBTN_IN) && blu_btn_down ) {
+      if ( blu_button.is_pressed ) {
         rainbow_wheel_speed = rainbow_wheel_speed^4;
       }
       
