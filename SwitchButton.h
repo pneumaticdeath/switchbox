@@ -1,3 +1,4 @@
+/* Copyright 2015, Mitch Patenaude  patenaude@gmail.com */
 
 #ifndef BUTTON_H
 #define BUTTON_H

@@ -1,3 +1,5 @@
+// This is copied from the example here https://www.arduino.cc/en/Tutorial/Tone
+
 /*************************************************
  * Public Constants
  *************************************************/

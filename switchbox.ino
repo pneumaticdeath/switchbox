@@ -1,3 +1,18 @@
+/*****************************************************************
+ * This code is to run a toy I built for my toddler son.
+ * It uses two switches to choose between 4 different
+ * animation modes, displaying those animations on a NeoPixel
+ * ring embedded in a large white/clear pushbutton.
+ *
+ * It uses 4 buttons in addition to the two switches.  The large
+ * button, and 3 lighted pushbuttons.  They are used to interact
+ * with the animations.
+ *
+ * Copyright 2015, Mitch Patenaude
+ * patenaude@gmail.com
+ *
+ *****************************************************************/
+
 #include <Adafruit_NeoPixel.h>
 #include "SwitchButton.h"
 #include "pitches.h"

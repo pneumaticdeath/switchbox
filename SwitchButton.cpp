@@ -1,3 +1,4 @@
+/* Copyright 2015, Mitch Patenaude  patenaude@gmail.com */
 
 #include "SwitchButton.h"
 
