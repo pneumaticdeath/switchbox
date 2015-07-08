@@ -36,7 +36,6 @@
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 int curr_mode = -1;
-uint32_t btn_debounce_timer = 0;
 #define DEBOUNCE_DELAY 50
 #define LONGPRESS_TIME 1000
 #define BEEP_TIME 250
@@ -283,6 +282,9 @@ void loop() {
         } else {                                  // red button released
           digitalWrite(REDBTN_OUT, HIGH);
         }
+      } else if ( red_button.is_long_press ) {
+        digitalWrite(REDBTN_OUT, (red_button.press_duration()&512)==0?LOW:HIGH);
+        dir_r = 0;
       }
       
       if ( grn_button.has_event ) {  // green button pressed
@@ -297,6 +299,9 @@ void loop() {
         } else {
           digitalWrite(GRNBTN_OUT, HIGH);
         }
+      } else if ( grn_button.is_long_press ) {
+        digitalWrite(GRNBTN_OUT, (grn_button.press_duration()&512)==0?LOW:HIGH);
+        dir_g = 0;
       }
       
       if ( blu_button.has_event ) {  // blue button pressed
@@ -311,6 +316,9 @@ void loop() {
         } else {
           digitalWrite(BLUBTN_OUT, HIGH);
         }
+      } else if ( blu_button.is_long_press ) {
+        digitalWrite(BLUBTN_OUT, (blu_button.press_duration()&512)==0?LOW:HIGH);
+        dir_b = 0;
       }
       
       if ( big_button.has_event ) { // big button pressed
@@ -325,6 +333,10 @@ void loop() {
             dir_g = -5;
           }
         }
+      } else if ( big_button.is_long_press ) { 
+        dir_b = 0;
+        dir_g = 0;
+        dir_r = 0;
       }
       break;
     case 1:
@@ -404,7 +416,7 @@ void loop() {
             break;
         }
       } else if ( grn_button.is_long_press ) {
-        if ( (((millis() - grn_button.button_debounce_timer)/512)%2) == 1 ) {
+        if ( (((grn_button.press_duration())/512)%2) == 1 ) {
           digitalWrite(GRNBTN_OUT, LOW);
         } else {
           digitalWrite(GRNBTN_OUT, HIGH);
@@ -434,7 +446,7 @@ void loop() {
             break;
         }
       } else if ( red_button.is_long_press ) {
-        if ( (((millis() - btn_debounce_timer)/512)%2) == 1 ) {
+        if ( (((red_button.press_duration())/512)%2) == 1 ) {
           digitalWrite(REDBTN_OUT, LOW);
         } else {
           digitalWrite(REDBTN_OUT, HIGH);
@@ -464,7 +476,7 @@ void loop() {
             break;
         }
       } else if ( blu_button.is_long_press ) {
-        if ( (((millis() - btn_debounce_timer)/512)%2) == 1 ) {
+        if ( (((blu_button.press_duration())/512)%2) == 1 ) {
           digitalWrite(BLUBTN_OUT, LOW);
         } else {
           digitalWrite(BLUBTN_OUT, HIGH);

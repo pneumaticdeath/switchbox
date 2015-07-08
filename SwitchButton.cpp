@@ -56,6 +56,7 @@ boolean SwitchButton::read() {
       this->is_down= false;
       this->is_released = true;
       this->has_event = true;
+      this->prev_press_duration = millis() - this->button_debounce_timer;
       this->button_debounce_timer = millis();
       if ( this->up_tone && this->up_tone_duration ) {
         tone(this->speaker_pin, this->up_tone, this->up_tone_duration);
@@ -65,5 +66,16 @@ boolean SwitchButton::read() {
   }
 
   return false;
+}
+
+uint32_t SwitchButton::press_duration() {
+  if ( this->is_released ) {
+    return this->prev_press_duration;
+  } else if ( this->is_down ) {
+    return millis() - this->button_debounce_timer;
+  }
+  
+  // logic is that when the button is up and not newly released we should return 0.
+  return 0;
 }
 

@@ -20,11 +20,13 @@ class SwitchButton {
     uint32_t button_debounce_timer;
 
     boolean read();
+    uint32_t press_duration();
 
   private:
     uint32_t long_press_time;
     uint32_t debounce_time;
     uint8_t  speaker_pin;
+    uint32_t prev_press_duration;
     uint16_t down_tone;
     uint16_t down_tone_duration;
     uint16_t up_tone;
