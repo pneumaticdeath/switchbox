@@ -14,8 +14,19 @@
  *****************************************************************/
 
 #include <Adafruit_NeoPixel.h>
+#include <avr/sleep.h>
+#include <avr/power.h>
+#include <avr/wdt.h>
 #include "SwitchButton.h"
 #include "pitches.h"
+
+// Time of inactivity which will result into going into low power mode
+// #define IDLE_TIMEOUT 600000
+// Short timeout for debugging
+#define IDLE_TIMEOUT 6000
+
+// Warning.. the watchdog sleep mode is experimental, and may brick your arduino.. you have been warned
+#define WATCHDOG_SLEEP
 
 #define NEOPIXEL_PIN 6
 #define NUM_PIXELS 16
@@ -208,6 +219,17 @@ void animate_np() {
       
 }
 
+void clear_all() {
+  for (int x=0; x<strip.numPixels(); x++) {
+    strip.setPixelColor(x, 0);
+  }
+  strip.show();
+
+  digitalWrite(REDBTN_OUT, LOW);
+  digitalWrite(GRNBTN_OUT, LOW);
+  digitalWrite(BLUBTN_OUT, LOW);
+}
+
 void read_all_buttons() {
   red_button.read();
   grn_button.read();
@@ -219,7 +241,49 @@ void read_all_buttons() {
   sw2.read();
 }
 
+volatile boolean watchdog_fired = false;
+
+ISR(WDR_vect)
+{
+  watchdog_fired = true;
+}
+
+void sleep() {
+  // set full power down.
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  
+  // turn off ADC
+  power_adc_disable();
+  
+  // Go to sleep
+  sleep_mode();
+  // it's now asleep for 0.25 seconds
+  
+  sleep_disable();
+  power_all_enable();
+}
+  
 void setup() {
+#ifdef WATCHDOG_SLEEP
+  // Set up low power mode... this is tricky so we disable interrupts while it's going on.
+  noInterrupts();
+  
+  // Clear the watchdog reset flag
+  MCUSR &= ~(1<<WDRF);
+  
+  // set WDCE ad WDE flags in watchdog control register
+  WDTCSR |= (1<<WDCE) | (1<<WDE);
+  
+  // Set WDP2 for 0.25 second wakeup
+  WDTCSR = (1<<WDP2);
+  
+  // Enable Watchdog interrupt, no reset.
+  WDTCSR |= (1<<WDIE);
+  
+  // re-enable interrupts
+  interrupts();
+#endif
+
   // Random seed setup
   randomSeed(analogRead(0));
   
@@ -235,8 +299,41 @@ void setup() {
 
 void loop() {
 
+#ifdef WATCHDOG_SLEEP
+  wdt_reset();
+#endif
+
   read_all_buttons();
   
+  // check to see if we've gone idle
+  if ( sw1.idle_time() >= IDLE_TIMEOUT && sw2.idle_time() >= IDLE_TIMEOUT && big_button.idle_time() >= IDLE_TIMEOUT 
+       && red_button.idle_time() >= IDLE_TIMEOUT && grn_button.idle_time() >= IDLE_TIMEOUT && blu_button.idle_time() >= IDLE_TIMEOUT ) {
+    clear_all();
+    unsigned int i, j;
+    while ( sw1.idle_time() >= IDLE_TIMEOUT && sw2.idle_time() >= IDLE_TIMEOUT && big_button.idle_time() >= IDLE_TIMEOUT 
+         && red_button.idle_time() >= IDLE_TIMEOUT && grn_button.idle_time() >= IDLE_TIMEOUT && blu_button.idle_time() >= IDLE_TIMEOUT ) {
+      for (i = 0; i<strip.numPixels(); i++) {
+        if ( i == j ) {
+          strip.setPixelColor(i, strip.Color(0, 0, 63));
+        } else if ( i == ((j + strip.numPixels()/3)%strip.numPixels()) ) {
+          strip.setPixelColor(i, strip.Color(0, 63, 0));
+        } else if ( i == ((j + 2*strip.numPixels()/3)%strip.numPixels()) ) {
+          strip.setPixelColor(i, strip.Color(63, 0, 0));
+        } else {
+          strip.setPixelColor(i, 0);
+        }
+      }
+      strip.show();
+      j = (j+1)%strip.numPixels();
+#ifdef WATCHDOG_SLEEP
+      sleep(); // sleep for a quarter of a second
+#else
+      delay(250);
+#endif
+      read_all_buttons();
+    }
+  }
+
   if ( sw1.has_event || sw2.has_event || curr_mode < 0 ) {
     int new_mode = (sw1.is_down?1:0) + (sw2.is_down?2:0);
     switch (new_mode) {

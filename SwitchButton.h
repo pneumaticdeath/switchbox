@@ -21,6 +21,7 @@ class SwitchButton {
 
     boolean read();
     uint32_t press_duration();
+    uint32_t idle_time();
 
   private:
     uint32_t long_press_time;

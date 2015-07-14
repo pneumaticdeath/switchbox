@@ -17,9 +17,10 @@ SwitchButton::SwitchButton(uint8_t pin, uint32_t long_press_time, uint32_t debou
   // initialize the pin
   pinMode(this->pin, INPUT);
   digitalWrite(this->pin, HIGH);
+  this->is_down = (digitalRead(this->pin) == 0); 
+  digitalWrite(this->pin, LOW);
 
   this->button_debounce_timer = millis();
-  this->is_down = (digitalRead(this->pin) == 0); 
   this->clear_state();
 }
 
@@ -31,6 +32,8 @@ void SwitchButton::clear_state() {
 }
 
 boolean SwitchButton::read() {
+  int val;
+
   if ( this->button_debounce_timer > millis() ) { // We've rolled over
     this->button_debounce_timer = 0;
   }
@@ -38,8 +41,12 @@ boolean SwitchButton::read() {
   this->clear_state();
   if ( (millis() - this->button_debounce_timer) < this->debounce_time ) return false;
 
-  if ( digitalRead(this->pin) == 0 ) {
-    if ( ! this->is_down ) {
+  digitalWrite(this->pin, HIGH); // set pull-up resistor for read
+  val = digitalRead(this->pin);  // read the state of the switch/button. 0 is down/closed.
+  digitalWrite(this->pin, LOW);  // clears pull-up resistor to save power
+
+  if ( val == 0 ) { // 0 represents down/closed.
+    if ( ! this->is_down ) {  // if not previously down/closed
       this->is_down = true;
       this->is_pressed = true;
       this->has_event = true;
@@ -53,7 +60,7 @@ boolean SwitchButton::read() {
     }
   } else { 
     if ( this->is_down ) {
-      this->is_down= false;
+      this->is_down = false;
       this->is_released = true;
       this->has_event = true;
       this->prev_press_duration = millis() - this->button_debounce_timer;
@@ -77,5 +84,9 @@ uint32_t SwitchButton::press_duration() {
   
   // logic is that when the button is up and not newly released we should return 0.
   return 0;
+}
+
+uint32_t SwitchButton::idle_time() {
+  return millis() - this->button_debounce_timer;
 }
 
