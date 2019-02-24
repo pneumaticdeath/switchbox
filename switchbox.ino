@@ -21,12 +21,12 @@
 #include "pitches.h"
 
 // Time of inactivity which will result into going into low power mode
-// #define IDLE_TIMEOUT 600000
+#define IDLE_TIMEOUT 600000
 // Short timeout for debugging
-#define IDLE_TIMEOUT 6000
+// #define IDLE_TIMEOUT 6000
 
 // Warning.. the watchdog sleep mode is experimental, and may brick your arduino.. you have been warned
-#define WATCHDOG_SLEEP
+// #define WATCHDOG_SLEEP
 
 #define NEOPIXEL_PIN 6
 #define NUM_PIXELS 16
@@ -249,6 +249,8 @@ ISR(WDR_vect)
 }
 
 void sleep() {
+  // Serial.println("Going to WDT sleep");
+  // delay(2);
   // set full power down.
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   
@@ -259,12 +261,16 @@ void sleep() {
   sleep_mode();
   // it's now asleep for 0.25 seconds
   
+  // Serial.println("Woke up from WDT sleep.");
   sleep_disable();
   power_all_enable();
 }
   
 void setup() {
+  // Serial.begin(115200);
+  
 #ifdef WATCHDOG_SLEEP
+  // Serial.println("Initializing the watchdog timer");
   // Set up low power mode... this is tricky so we disable interrupts while it's going on.
   noInterrupts();
   
@@ -272,16 +278,17 @@ void setup() {
   MCUSR &= ~(1<<WDRF);
   
   // set WDCE ad WDE flags in watchdog control register
-  WDTCSR |= (1<<WDCE) | (1<<WDE);
+  WDTCSR |= (1<<WDCE);
   
   // Set WDP2 for 0.25 second wakeup
-  WDTCSR = (1<<WDP2);
+  WDTCSR = (1<<WDP2) | (1<<WDIE);
   
   // Enable Watchdog interrupt, no reset.
-  WDTCSR |= (1<<WDIE);
+  // WDTCSR |= (1<<WDIE);
   
   // re-enable interrupts
   interrupts();
+  // Serial.println("Done initializing the watchdog timer");
 #endif
 
   // Random seed setup
